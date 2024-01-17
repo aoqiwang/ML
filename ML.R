@@ -19,9 +19,6 @@ library(limma)
 library(Matrix)
 library(data.table)
 
-#数据要求，surSigExp.txt要为需要提供的文件
-###第一列是样本，第二列OS.time，第三列OS，之后是genes。
-###第二列，第三列，必须重命名为OS.time和OS
 my<-read.table("surSigExp.txt",header=T,row.names=1)
 
 rm(result)
@@ -37,7 +34,7 @@ nfold=10 #启用10折交叉验证
 rf_nodesize <- 5
 fold_indices <- sample(1:nfold, size = nrow(my), replace = TRUE)
 c_index_values <- numeric(nfold)
-gene_importance <- rep(0, ncol(my) - 2)# -2 是因为去除了 OS.time 和 OS
+gene_importance <- rep(0, ncol(my) - 2)
 for (fold in 1:nfold) {
   # 划分训练集和测试集
   train_data <- my[fold_indices != fold, ]
@@ -50,7 +47,7 @@ fit <- rfsrc(Surv(OS.time,OS)~.,data = train_data,
              proximity = T,
              forest = T,
              seed = seed)
-  gene_importance_fold <- fit$importance# 提取基因重要性
+  gene_importance_fold <- fit$importance
   gene_importance <- gene_importance + gene_importance_fold# 累加基因重要性
 val_data_list <- list(test_data)
 est_data <- test_data
@@ -1252,8 +1249,6 @@ library(gbm)
 library(dplyr)
 library(ggplot2)
 
-# 假设你有一个数据框df，包含了所有的基因表达数据和生存时间
-# nfold是交叉验证的折数，这里我们使用10折
 df<-my2
 # 初始化一个向量来存储所有基因的累积重要性
 gene_importance_cumulative <- rep(0, ncol(df) - 2)  # 减去2是因为前两列是生存时间和事件
@@ -1267,41 +1262,32 @@ for (fold in 1:nfold) {
   # 拟合GBM模型
   fit <- gbm(Surv(OS.time, OS) ~ ., data = train_data, distribution = 'coxph',
              n.trees = 10000, interaction.depth = 3, n.minobsinnode = 10,
-             shrinkage = 0.001, cv.folds = 10, n.cores = NULL)  # n.cores设置为NULL，允许gbm自动选择
-  
-  # 提取变量重要性
+             shrinkage = 0.001, cv.folds = 10, n.cores = NULL)
+
   gbm_imp <- summary(fit, n.trees = fit$n.trees, plot.it = FALSE)
   
-  #
-#累积每个基因的重要性
 gene_importance_cumulative <- gene_importance_cumulative + gbm_imp$rel.inf
 }
-#计算平均重要性
+
 average_gene_importance <- gene_importance_cumulative / nfold
 
-#创建一个数据框，包含基因名和它们的平均重要性
+
 gene_importance_df <- data.frame(
-Gene = colnames(df)[-c(1:2)], # 假设前两列是OS.time和OS
+Gene = colnames(df)[-c(1:2)],
 Importance = average_gene_importance
 )
 
-#根据重要性对基因进行排序
 ordered_genes <- gene_importance_df %>%
 arrange(desc(Importance))
 
-#选择最重要的基因，例如前20个
 top_genes <- head(ordered_genes, 20)
 
-#绘制重要基因的条形图
 ggplot(top_genes, aes(x = reorder(Gene, Importance), y = Importance)) +
 geom_bar(stat = "identity", fill = "steelblue") +
 coord_flip() + # 翻转坐标，使基因名在y轴
 labs(title = "Average Importance of Genes across All Folds", x = "Importance", y = "Gene") +
 theme_light()
 
-
-#根据上面的平均重要性，计算风险评分。代码
-#选择最重要且稳定的7个基因
 top_features<-top_genes[1:7,]$Gene
 
 train_data_reduced <- my2[, c("OS.time", "OS", top_features)]
