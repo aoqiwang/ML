@@ -1,1 +1,2 @@
-The ML.R file contains methods for using machine learning based on prognostic data, while linket1. R includes methods for drawing correlation graphs.
+For machine learning, the main tasks are classification and regression. All methods of utilizing multiple machine learning overlays are feasible. It can help us better screen important variables and thus better construct models.
+The ML.R file contains methods for using machine learning based on prognostic data, while linket1. R includes methods for drawing correlation graphs.The drawing code is also included in them.
